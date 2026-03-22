@@ -44,6 +44,7 @@ pub mod observe;
 pub mod heal;
 pub mod guardrails;
 pub mod runtime;
+pub mod semantic_eyes;
 pub mod prelude;
 
 pub use error::{BastionError, BastionResult};
@@ -55,3 +56,4 @@ pub use observe::{Metrics, MetricsSnapshot};
 pub use heal::{HealAction, HealDecision};
 pub use guardrails::{Guardrail, GuardrailResult, GuardrailVerdict};
 pub use runtime::BastionRuntime;
+pub use semantic_eyes::SemanticEyes;

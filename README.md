@@ -156,30 +156,64 @@ assert!(valid); // Chain integrity verified
 
 Export the full audit trail as JSON for compliance review.
 
+## Semantic Eyes — Knowledge Graph Integration
+
+Bastion includes `semantic_eyes.rs` — a memory-mapped binary knowledge graph layer that gives every safety primitive real understanding of your domain libraries and past executions. Actions are no longer evaluated in isolation; `gate_with_context()` can ask "has this action type caused failures before?", self-healing can look up precedent fixes, and compliance checks traverse `Contradicts` / `TradeoffOf` edges through a typed knowledge graph. The existing deterministic core stays untouched.
+
+```rust
+use bastion_core::SemanticEyes;
+
+let eyes = SemanticEyes::load("./knowledge_graphs")?;
+
+// Query risks before approving an action
+let risks = eyes.query_risks("transfer $50,000 to unknown vendor");
+// risks.factors, risks.mitigations, risks.contradictions
+
+// Find evidence supporting a compliance decision
+let evidence = eyes.find_evidence("OFAC sanctions screening");
+
+// Look up precedent for self-healing
+let precedent = eyes.find_precedent("transaction velocity limit exceeded");
+
+// Attach reasoning provenance to audit entries
+let context = eyes.enrich_audit("execute high-value trade");
+```
+
+Backed by memory-mapped binary graph files — scales to terabytes without loading into RAM. The OS pages in only what's accessed. Bloom filters provide sub-microsecond cluster relevance checks. Inverted term indexes provide O(1) node lookup. CSR edge arrays provide O(1) edge traversal.
+
 ## Architecture
 
 ```
 Your Agent Code
        │
        ▼
-┌─────────────────────────────────┐
-│         BastionRuntime          │
-│                                 │
-│  gate() ──► Guardrails          │
-│            ──► Consensus        │
-│                                 │
-│  checkpoint() ──► Store         │
-│  rollback()  ──► Restore        │
-│                                 │
-│  verify() ──► Deterministic     │
-│              checks (no LLM)    │
-│                                 │
-│  heal() ──► Retry/Escalate/     │
-│             Abort decision tree │
-│                                 │
-│  audit() ──► Hash-chained log   │
-│  observe() ──► Live metrics     │
-└─────────────────────────────────┘
+┌─────────────────────────────────────┐
+│           BastionRuntime            │
+│                                     │
+│  gate() ──► Guardrails              │
+│            ──► Consensus            │
+│            ──► Semantic Eyes (graph) │
+│                                     │
+│  checkpoint() ──► Store             │
+│  rollback()  ──► Restore            │
+│                                     │
+│  verify() ──► Deterministic checks  │
+│            ──► Graph evidence query  │
+│                                     │
+│  heal() ──► Decision tree           │
+│           ──► Precedent lookup       │
+│                                     │
+│  audit() ──► Hash-chained log       │
+│           ──► Reasoning provenance   │
+│  observe() ──► Live metrics         │
+└─────────────────────────────────────┘
+       │
+       ▼
+┌─────────────────────────────────────┐
+│  Binary Knowledge Graphs (mmap)     │
+│  Bloom filters │ Term index │ CSR   │
+│  Scales to TB  │ < 1GB RAM  │ O(1)  │
+└─────────────────────────────────────┘
 ```
 
 ## Performance
