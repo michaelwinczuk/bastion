@@ -181,6 +181,8 @@ let context = eyes.enrich_audit("execute high-value trade");
 
 Backed by memory-mapped binary graph files — scales to terabytes without loading into RAM. The OS pages in only what's accessed. Bloom filters provide sub-microsecond cluster relevance checks. Inverted term indexes provide O(1) node lookup. CSR edge arrays provide O(1) edge traversal.
 
+Run `cargo run --example semantic_demo` to see agents with real semantic understanding — builds a knowledge graph, traverses typed edges, and shows before/after.
+
 ## Architecture
 
 ```mermaid

@@ -128,6 +128,10 @@ fn main() {
     println!("  ║    heal() → look up precedent fixes via AlternativeTo   ║");
     println!("  ║    audit() → attach full reasoning provenance           ║");
     println!("  ║                                                         ║");
+    println!("  ║                                                         ║");
+    println!("  ║  Agents don't just check patterns — they understand     ║");
+    println!("  ║  relationships, precedents, and contradictions.         ║");
+    println!("  ║                                                         ║");
     println!("  ║  Same deterministic core. Same speed. Now with eyes.    ║");
     println!("  ╚═══════════════════════════════════════════════════════════╝");
     println!();
