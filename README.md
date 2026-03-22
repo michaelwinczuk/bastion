@@ -183,7 +183,46 @@ Backed by memory-mapped binary graph files — scales to terabytes without loadi
 
 ## Architecture
 
+```mermaid
+flowchart TD
+    A[Your Agent Code] --> B[BastionRuntime]
+
+    B --> C{gate}
+    C --> C1[Guardrails]
+    C --> C2[Multi-Model Consensus]
+    C --> C3[Semantic Eyes: query_risks]
+
+    B --> D{checkpoint}
+    D --> D1[MemoryStore / FileStore]
+
+    B --> E{verify}
+    E --> E1[Deterministic Checks]
+    E --> E2[Graph Evidence Query]
+
+    B --> F{heal}
+    F --> F1[Retry / Escalate / Abort]
+    F --> F2[Precedent Lookup via Graph]
+
+    B --> G{audit}
+    G --> G1[Hash-Chained Log]
+    G --> G2[Reasoning Provenance]
+
+    B --> H[observe: Live Metrics]
+
+    C3 --> K[(Binary Knowledge Graphs)]
+    E2 --> K
+    F2 --> K
+    G2 --> K
+
+    K --> K1[Bloom Filters: sub-μs]
+    K --> K2[Term Index: O1 lookup]
+    K --> K3[CSR Edges: O1 traversal]
+    K --> K4[mmap: scales to TB]
 ```
+
+```
+ASCII fallback:
+
 Your Agent Code
        │
        ▼
@@ -214,6 +253,59 @@ Your Agent Code
 │  Bloom filters │ Term index │ CSR   │
 │  Scales to TB  │ < 1GB RAM  │ O(1)  │
 └─────────────────────────────────────┘
+```
+
+## Example: Agent Tool Call with Full Safety Pipeline
+
+```rust
+use bastion_core::prelude::*;
+use bastion_core::SemanticEyes;
+
+// Load knowledge graph (mmap — instant, no RAM)
+let eyes = SemanticEyes::load("./knowledge_graphs").unwrap();
+
+// Build runtime with 3 safety agents
+let runtime = BastionRuntime::builder()
+    .add_agent(agent_sonnet)
+    .add_agent(agent_gpt4o)
+    .add_agent(agent_haiku)
+    .consensus(ConsensusStrategy::Majority)
+    .guardrail(Box::new(SpendingLimit { max_usd: 10_000.0 }))
+    .verification(Box::new(HallucinationCheck))
+    .build();
+
+// 1. Query knowledge graph for risks BEFORE gating
+let risks = eyes.query_risks("execute database migration on prod");
+if risks.risk_level == "high" {
+    println!("Graph found {} risk factors, {} contradictions",
+        risks.factors.len(), risks.contradictions.len());
+}
+
+// 2. Gate through consensus + guardrails
+let outcome = runtime.gate("execute database migration on prod").await?;
+
+// 3. Checkpoint before execution
+let cp = runtime.checkpoint("pre-migration", db_state).await?;
+
+// 4. Execute the action...
+let result = execute_migration().await;
+
+// 5. Verify with deterministic checks + graph evidence
+let checks = runtime.verify("migration", &result);
+let evidence = eyes.find_evidence("database migration safety");
+
+if !bastion_core::verify::all_valid(&checks) {
+    // 6. Self-heal: look up what fixed this before
+    let precedent = eyes.find_precedent("database migration failure");
+    println!("Found {} precedent fixes", precedent.len());
+
+    // 7. Rollback to checkpoint
+    runtime.rollback(&cp).await?;
+}
+
+// 8. Audit with reasoning provenance
+let context = eyes.enrich_audit("database migration");
+// Audit entry now includes: risk factors, evidence, graph traversal paths
 ```
 
 ## Performance
