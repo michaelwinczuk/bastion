@@ -1,0 +1,38 @@
+[package]
+name = "bastion-core"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.75"
+license = "MIT OR Apache-2.0"
+description = "Bastion — The open-source Production Kernel for Agentic AI. Multi-model consensus, self-healing, deterministic checkpoints, immutable audit trails, and pluggable compliance guardrails."
+readme = "README.md"
+keywords = ["ai", "agents", "reliability", "production", "consensus", "safety"]
+categories = ["asynchronous", "science"]
+
+[lib]
+name = "bastion_core"
+crate-type = ["lib"]
+
+[dependencies]
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "time", "fs"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+async-trait = "0.1"
+thiserror = "1"
+uuid = { version = "1", features = ["v4"] }
+chrono = { version = "0.4", features = ["serde"] }
+
+[[bench]]
+name = "throughput"
+harness = false
+
+[dev-dependencies]
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "time", "test-util"] }
+tempfile = "3"
+
+[profile.release]
+lto = true
+codegen-units = 1
+opt-level = "z"
+panic = "abort"
+strip = true
