@@ -1,5 +1,6 @@
 use async_trait::async_trait;
 use bastion_core::prelude::*;
+use bastion_core::checkpoint::CheckpointStore;
 
 struct ApproveAgent;
 #[async_trait]
@@ -10,6 +11,7 @@ impl Agent for ApproveAgent {
     fn agent_id(&self) -> &str { "approve" }
 }
 
+#[allow(dead_code)]
 struct RejectAgent;
 #[async_trait]
 impl Agent for RejectAgent {
@@ -108,9 +110,9 @@ async fn test_heal_escalate_on_oscillation() {
 #[tokio::test]
 async fn test_audit_chain_integrity() {
     let rt = BastionRuntime::builder().add_agent(ApproveAgent).add_agent(ApproveAgent).build();
-    rt.gate("action 1").await.unwrap();
-    rt.gate("action 2").await.unwrap();
-    rt.gate("action 3").await.unwrap();
+    let _ = rt.gate("action 1").await.unwrap();
+    let _ = rt.gate("action 2").await.unwrap();
+    let _ = rt.gate("action 3").await.unwrap();
     let (valid, _) = rt.audit_log().verify_chain();
     assert!(valid);
 }
@@ -121,8 +123,8 @@ async fn test_metrics_tracking() {
         .add_agent(ApproveAgent).add_agent(ApproveAgent)
         .guardrail(Box::new(DangerousPatterns))
         .build();
-    rt.gate("safe action").await.unwrap();
-    rt.gate("DROP TABLE x").await.unwrap();
+    let _ = rt.gate("safe action").await.unwrap();
+    let _ = rt.gate("DROP TABLE x").await.unwrap();
     let m = rt.observe();
     assert_eq!(m.total_actions, 2);
     assert_eq!(m.approved, 1);
@@ -146,4 +148,56 @@ async fn test_defense_human_in_loop() {
 
     let outcome2 = rt.gate_with_context("launch drone", &serde_json::json!({"human_approved": true})).await.unwrap();
     assert!(outcome2.is_approved());
+}
+
+#[tokio::test]
+async fn test_filestore_write_read_roundtrip() {
+    let tmp = tempfile::tempdir().unwrap();
+    let store = FileStore::new(tmp.path().to_path_buf()).await.unwrap();
+
+    let state = serde_json::json!({"db_version": 42, "tables": ["users", "orders"]});
+    let cp = bastion_core::checkpoint::Checkpoint::new("pre-migration", state.clone());
+    let id = cp.id.clone();
+
+    store.save(&cp).await.unwrap();
+
+    // Read it back
+    let loaded = store.load(&id).await.unwrap();
+    assert_eq!(loaded.id, id);
+    assert_eq!(loaded.label, "pre-migration");
+    assert_eq!(loaded.state, state);
+
+    // List should contain our checkpoint
+    let ids = store.list().await.unwrap();
+    assert!(ids.contains(&id));
+
+    // Delete and verify it's gone
+    store.delete(&id).await.unwrap();
+    let ids_after = store.list().await.unwrap();
+    assert!(!ids_after.contains(&id));
+    assert!(store.load(&id).await.is_err());
+}
+
+#[tokio::test]
+async fn test_filestore_multiple_checkpoints() {
+    let tmp = tempfile::tempdir().unwrap();
+    let store = FileStore::new(tmp.path().to_path_buf()).await.unwrap();
+
+    let cp1 = bastion_core::checkpoint::Checkpoint::new("first", serde_json::json!({"step": 1}));
+    let cp2 = bastion_core::checkpoint::Checkpoint::new("second", serde_json::json!({"step": 2}));
+    let id1 = cp1.id.clone();
+    let id2 = cp2.id.clone();
+
+    store.save(&cp1).await.unwrap();
+    store.save(&cp2).await.unwrap();
+
+    let ids = store.list().await.unwrap();
+    assert_eq!(ids.len(), 2);
+    assert!(ids.contains(&id1));
+    assert!(ids.contains(&id2));
+
+    let loaded1 = store.load(&id1).await.unwrap();
+    let loaded2 = store.load(&id2).await.unwrap();
+    assert_eq!(loaded1.state["step"], 1);
+    assert_eq!(loaded2.state["step"], 2);
 }

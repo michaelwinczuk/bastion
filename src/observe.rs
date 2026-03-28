@@ -54,7 +54,7 @@ impl Metrics {
     }
 
     pub fn record_action(&self, approved: bool, latency_ms: u64, cost_usd: f64) {
-        let mut m = self.inner.write().expect("metrics lock");
+        let mut m = self.inner.write().unwrap_or_else(|e| e.into_inner());
         m.total_actions += 1;
         m.total_latency_ms += latency_ms;
         m.total_cost_usd += cost_usd;
@@ -62,29 +62,29 @@ impl Metrics {
     }
 
     pub fn record_consensus(&self, reached: bool) {
-        let mut m = self.inner.write().expect("metrics lock");
+        let mut m = self.inner.write().unwrap_or_else(|e| e.into_inner());
         if reached { m.consensus_agreements += 1; } else { m.consensus_failures += 1; }
     }
 
     pub fn record_drift(&self) {
-        self.inner.write().expect("metrics lock").drift_detections += 1;
+        self.inner.write().unwrap_or_else(|e| e.into_inner()).drift_detections += 1;
     }
 
     pub fn record_rollback(&self) {
-        self.inner.write().expect("metrics lock").rollbacks += 1;
+        self.inner.write().unwrap_or_else(|e| e.into_inner()).rollbacks += 1;
     }
 
     pub fn record_failure(&self) {
-        self.inner.write().expect("metrics lock").failed += 1;
+        self.inner.write().unwrap_or_else(|e| e.into_inner()).failed += 1;
     }
 
     pub fn record_verification(&self, passed: bool) {
-        let mut m = self.inner.write().expect("metrics lock");
+        let mut m = self.inner.write().unwrap_or_else(|e| e.into_inner());
         if passed { m.verifications_passed += 1; } else { m.verifications_failed += 1; }
     }
 
     pub fn snapshot(&self) -> MetricsSnapshot {
-        let m = self.inner.read().expect("metrics lock");
+        let m = self.inner.read().unwrap_or_else(|e| e.into_inner());
         MetricsSnapshot {
             total_actions: m.total_actions,
             approved: m.approved,

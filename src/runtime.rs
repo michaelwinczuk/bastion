@@ -52,42 +52,9 @@ impl<S: CheckpointStore> BastionRuntime<S> {
     // ── gate() — consensus before action ─────────────────
 
     /// Gate an action through multi-model consensus.
+    /// Equivalent to `gate_with_context(action, &json!({}))`.
     pub async fn gate(&self, action: &str) -> BastionResult<GateOutcome> {
-        let timer = Timer::start();
-
-        // Check guardrails first
-        let guardrail_results = guardrails::evaluate_all(&self.guardrails, action, &serde_json::json!({}));
-        if let Some(blocked) = guardrails::any_blocked(&guardrail_results) {
-            let reason = match &blocked.verdict {
-                GuardrailVerdict::Block { reason } => reason.clone(),
-                _ => "blocked".into(),
-            };
-            self.audit.log(Severity::Critical, action, &format!("BLOCKED: {}", reason), None);
-            self.metrics.record_action(false, timer.elapsed_ms(), 0.0);
-            return Ok(GateOutcome::Blocked { reason });
-        }
-
-        // Run consensus
-        match consensus::run_consensus(&self.agents, action, &self.consensus_config).await {
-            Ok(result) => {
-                self.audit.log(
-                    Severity::Info,
-                    action,
-                    &format!("APPROVED: {:.0}% agreement", result.agreement_ratio * 100.0),
-                    None,
-                );
-                self.metrics.record_action(true, timer.elapsed_ms(), 0.0);
-                self.metrics.record_consensus(true);
-                Ok(GateOutcome::Approved { consensus: result })
-            }
-            Err(BastionError::ConsensusFailure { reason }) => {
-                self.audit.log(Severity::Warning, action, &format!("REJECTED: {}", reason), None);
-                self.metrics.record_action(false, timer.elapsed_ms(), 0.0);
-                self.metrics.record_consensus(false);
-                Ok(GateOutcome::Rejected { reason })
-            }
-            Err(e) => Err(e),
-        }
+        self.gate_with_context(action, &serde_json::json!({})).await
     }
 
     /// Gate with context (for guardrails that need structured data).
@@ -199,6 +166,7 @@ impl<S: CheckpointStore> BastionRuntime<S> {
 // ── Gate outcome ─────────────────────────────────────────
 
 #[derive(Debug, Clone)]
+#[must_use = "safety outcome must be checked"]
 pub enum GateOutcome {
     Approved { consensus: ConsensusResult },
     Rejected { reason: String },

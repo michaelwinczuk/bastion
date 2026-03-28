@@ -313,8 +313,8 @@ let context = eyes.enrich_audit("database migration");
 ## Performance
 
 - Sub-millisecond overhead per `gate()` call (with mock agents)
-- Zero-copy checkpoint serialization
-- Lock-free metrics collection
+- JSON checkpoint serialization with file and in-memory stores
+- Thread-safe metrics collection with poisoned-lock recovery
 - No external dependencies beyond Tokio
 
 ## Tests

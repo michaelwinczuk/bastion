@@ -53,21 +53,21 @@ impl MemoryStore {
 #[async_trait]
 impl CheckpointStore for MemoryStore {
     async fn save(&self, checkpoint: &Checkpoint) -> BastionResult<()> {
-        self.data.write().expect("lock").insert(checkpoint.id.clone(), checkpoint.clone());
+        self.data.write().unwrap_or_else(|e| e.into_inner()).insert(checkpoint.id.clone(), checkpoint.clone());
         Ok(())
     }
 
     async fn load(&self, id: &str) -> BastionResult<Checkpoint> {
-        self.data.read().expect("lock").get(id).cloned()
+        self.data.read().unwrap_or_else(|e| e.into_inner()).get(id).cloned()
             .ok_or_else(|| BastionError::NotFound(id.to_string()))
     }
 
     async fn list(&self) -> BastionResult<Vec<String>> {
-        Ok(self.data.read().expect("lock").keys().cloned().collect())
+        Ok(self.data.read().unwrap_or_else(|e| e.into_inner()).keys().cloned().collect())
     }
 
     async fn delete(&self, id: &str) -> BastionResult<()> {
-        self.data.write().expect("lock").remove(id);
+        self.data.write().unwrap_or_else(|e| e.into_inner()).remove(id);
         Ok(())
     }
 }

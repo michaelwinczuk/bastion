@@ -26,6 +26,7 @@ use serde_json::{json, Value};
 // Edge type constants (matching graph_engine)
 const SOLVES: u8 = 0;
 const CAUSES: u8 = 1;
+#[allow(dead_code)]
 const REQUIRES: u8 = 2;
 const ENABLES: u8 = 3;
 const CONTRADICTS: u8 = 4;
@@ -70,8 +71,6 @@ pub struct ReasoningStep {
 pub struct SemanticEyes {
     /// Directory containing .graphbin + .bloom + index.jsonld
     graphs_dir: std::path::PathBuf,
-    /// Bloom filter data per cluster (loaded once, tiny)
-    bloom_cache: HashMap<String, Vec<u8>>,
     /// Index: term → cluster names
     term_index: HashMap<String, Vec<String>>,
 }
@@ -101,23 +100,8 @@ impl SemanticEyes {
             HashMap::new()
         };
 
-        // Cache bloom filters
-        let mut bloom_cache = HashMap::new();
-        if let Ok(entries) = std::fs::read_dir(graphs_dir) {
-            for entry in entries.flatten() {
-                let path = entry.path();
-                if path.extension().and_then(|e| e.to_str()) == Some("bloom") {
-                    if let Ok(data) = std::fs::read(&path) {
-                        let cluster = path.file_stem().unwrap().to_string_lossy().to_string();
-                        bloom_cache.insert(cluster, data);
-                    }
-                }
-            }
-        }
-
         Ok(Self {
             graphs_dir: graphs_dir.to_path_buf(),
-            bloom_cache,
             term_index,
         })
     }
@@ -339,6 +323,7 @@ impl SemanticEyes {
 
 // ─── Lightweight Binary Reader (self-contained, no swarm-core dependency) ──
 
+#[allow(dead_code)]
 struct BinaryGraphReader {
     mmap: memmap2::Mmap,
     cluster: String,

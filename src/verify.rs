@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 
 /// Result of a verification check.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[must_use = "safety outcome must be checked"]
 pub enum VerifyResult {
     /// Output matches expectations.
     Valid,

@@ -10,6 +10,7 @@ pub enum GuardrailVerdict {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[must_use = "safety outcome must be checked"]
 pub struct GuardrailResult {
     pub rule: String,
     pub verdict: GuardrailVerdict,

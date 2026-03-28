@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 
 /// What the healer decides to do.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[must_use = "safety outcome must be checked"]
 pub enum HealAction {
     /// Retry the same action (possibly with a different model).
     Retry { reason: String },
