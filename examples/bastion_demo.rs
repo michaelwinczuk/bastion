@@ -14,7 +14,9 @@ use bastion_core::prelude::*;
 
 // ── Mock agents (in production, these call real LLMs) ────
 
-struct SafetyAgent { name: String }
+struct SafetyAgent {
+    name: String,
+}
 
 #[async_trait]
 impl Agent for SafetyAgent {
@@ -34,7 +36,9 @@ impl Agent for SafetyAgent {
         })
     }
 
-    fn agent_id(&self) -> &str { &self.name }
+    fn agent_id(&self) -> &str {
+        &self.name
+    }
 }
 
 #[tokio::main]
@@ -48,16 +52,24 @@ async fn main() {
 
     // Build the runtime with 3 safety agents + guardrails + verifications
     let runtime = BastionRuntime::builder()
-        .add_agent(SafetyAgent { name: "claude-sonnet".into() })
-        .add_agent(SafetyAgent { name: "gpt-4o".into() })
-        .add_agent(SafetyAgent { name: "gemini-pro".into() })
+        .add_agent(SafetyAgent {
+            name: "claude-sonnet".into(),
+        })
+        .add_agent(SafetyAgent {
+            name: "gpt-4o".into(),
+        })
+        .add_agent(SafetyAgent {
+            name: "gemini-pro".into(),
+        })
         .consensus(ConsensusStrategy::Majority)
         .min_confidence(0.8)
         .guardrail(Box::new(SpendingLimit { max_usd: 10_000.0 }))
         .guardrail(Box::new(DangerousPatterns))
         .verification(Box::new(NotEmpty))
         .verification(Box::new(HallucinationCheck))
-        .verification(Box::new(ConfidenceThreshold { min_confidence: 0.7 }))
+        .verification(Box::new(ConfidenceThreshold {
+            min_confidence: 0.7,
+        }))
         .max_retries(3)
         .build();
 
@@ -65,34 +77,54 @@ async fn main() {
     // Scenario 1: Safe action — full pipeline
     // ══════════════════════════════════════════════════════
     println!("  ── Scenario 1: Deploy API update ──");
-    let outcome = runtime.gate("deploy api-server v2.1.0 to production").await.unwrap();
+    let outcome = runtime
+        .gate("deploy api-server v2.1.0 to production")
+        .await
+        .unwrap();
     print!("     Gate: ");
     match &outcome {
         GateOutcome::Approved { consensus } => {
-            println!("APPROVED ({:.0}% agreement, {}/{} agents)",
+            println!(
+                "APPROVED ({:.0}% agreement, {}/{} agents)",
                 consensus.agreement_ratio * 100.0,
                 consensus.total_responses - consensus.dissenting.len(),
-                consensus.total_responses);
+                consensus.total_responses
+            );
         }
         _ => println!("{:?}", outcome),
     }
 
-    let cp_id = runtime.checkpoint("pre-deploy", serde_json::json!({"version": "2.0.0"})).await.unwrap();
+    let cp_id = runtime
+        .checkpoint("pre-deploy", serde_json::json!({"version": "2.0.0"}))
+        .await
+        .unwrap();
     println!("     Checkpoint: {}", &cp_id[..8]);
 
-    let verify_results = runtime.verify("deploy", &serde_json::json!({
-        "status": "success",
-        "confidence": 0.95,
-    }));
-    let all_pass = verify_results.iter().all(|(_, r)| matches!(r, VerifyResult::Valid));
-    println!("     Verify: {} checks, all passed: {}", verify_results.len(), all_pass);
+    let verify_results = runtime.verify(
+        "deploy",
+        &serde_json::json!({
+            "status": "success",
+            "confidence": 0.95,
+        }),
+    );
+    let all_pass = verify_results
+        .iter()
+        .all(|(_, r)| matches!(r, VerifyResult::Valid));
+    println!(
+        "     Verify: {} checks, all passed: {}",
+        verify_results.len(),
+        all_pass
+    );
     println!();
 
     // ══════════════════════════════════════════════════════
     // Scenario 2: Dangerous action — guardrail blocks
     // ══════════════════════════════════════════════════════
     println!("  ── Scenario 2: Dangerous database command ──");
-    let outcome = runtime.gate("DROP TABLE users; -- cleanup old data").await.unwrap();
+    let outcome = runtime
+        .gate("DROP TABLE users; -- cleanup old data")
+        .await
+        .unwrap();
     print!("     Gate: ");
     match &outcome {
         GateOutcome::Blocked { reason } => println!("BLOCKED — {}", reason),
@@ -113,14 +145,25 @@ async fn main() {
         _ => println!("{:?}", outcome),
     }
 
-    let cp2 = runtime.checkpoint("pre-analysis", serde_json::json!({"dataset": "customers_q4"})).await.unwrap();
+    let cp2 = runtime
+        .checkpoint(
+            "pre-analysis",
+            serde_json::json!({"dataset": "customers_q4"}),
+        )
+        .await
+        .unwrap();
 
     // Simulate hallucinated output
-    let verify_results = runtime.verify("analyze", &serde_json::json!({
-        "result": "I believe this might show a trend, hypothetically speaking",
-        "confidence": 0.45,
-    }));
-    let has_issues = verify_results.iter().any(|(_, r)| !matches!(r, VerifyResult::Valid));
+    let verify_results = runtime.verify(
+        "analyze",
+        &serde_json::json!({
+            "result": "I believe this might show a trend, hypothetically speaking",
+            "confidence": 0.45,
+        }),
+    );
+    let has_issues = verify_results
+        .iter()
+        .any(|(_, r)| !matches!(r, VerifyResult::Valid));
     println!("     Verify: issues detected: {}", has_issues);
     for (name, result) in &verify_results {
         match result {
@@ -146,10 +189,13 @@ async fn main() {
     // Scenario 4: Spending limit
     // ══════════════════════════════════════════════════════
     println!("  ── Scenario 4: Overspend attempt ──");
-    let outcome = runtime.gate_with_context(
-        "purchase enterprise license",
-        &serde_json::json!({"amount_usd": 50_000.0}),
-    ).await.unwrap();
+    let outcome = runtime
+        .gate_with_context(
+            "purchase enterprise license",
+            &serde_json::json!({"amount_usd": 50_000.0}),
+        )
+        .await
+        .unwrap();
     print!("     Gate: ");
     match &outcome {
         GateOutcome::Blocked { reason } => println!("BLOCKED — {}", reason),
@@ -166,7 +212,10 @@ async fn main() {
 
     println!("  ── Audit & Metrics ──");
     println!("     Audit entries: {}", log.len());
-    println!("     Chain integrity: {}", if chain_valid { "VERIFIED" } else { "BROKEN" });
+    println!(
+        "     Chain integrity: {}",
+        if chain_valid { "VERIFIED" } else { "BROKEN" }
+    );
     println!("     Total actions: {}", metrics.total_actions);
     println!("     Approved: {}", metrics.approved);
     println!("     Blocked: {}", metrics.blocked);

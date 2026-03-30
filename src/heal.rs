@@ -15,7 +15,10 @@ pub enum HealAction {
     /// Abort — too many failures, give up.
     Abort { reason: String },
     /// Rollback to checkpoint and try different approach.
-    Rollback { checkpoint_id: String, reason: String },
+    Rollback {
+        checkpoint_id: String,
+        reason: String,
+    },
 }
 
 /// Decision context for the healer.
@@ -93,17 +96,13 @@ pub fn decide(ctx: &HealDecision) -> HealAction {
             }
         }
 
-        "timeout" => {
-            HealAction::Retry {
-                reason: "operation timed out — retrying".into(),
-            }
-        }
+        "timeout" => HealAction::Retry {
+            reason: "operation timed out — retrying".into(),
+        },
 
-        "guardrail_blocked" => {
-            HealAction::Escalate {
-                reason: format!("guardrail blocked action: {}", ctx.error_detail),
-            }
-        }
+        "guardrail_blocked" => HealAction::Escalate {
+            reason: format!("guardrail blocked action: {}", ctx.error_detail),
+        },
 
         _ => {
             if ctx.attempt == 1 {

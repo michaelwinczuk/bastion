@@ -1,8 +1,8 @@
 //! Real-time observability — track cost, latency, error rate, and drift across agents.
 
+use serde::{Deserialize, Serialize};
 use std::sync::RwLock;
 use std::time::Instant;
-use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MetricsSnapshot {
@@ -44,11 +44,18 @@ impl Metrics {
     pub fn new() -> Self {
         Self {
             inner: RwLock::new(MetricsInner {
-                total_actions: 0, approved: 0, blocked: 0, failed: 0,
-                total_latency_ms: 0, total_cost_usd: 0.0,
-                consensus_agreements: 0, consensus_failures: 0,
-                drift_detections: 0, rollbacks: 0,
-                verifications_passed: 0, verifications_failed: 0,
+                total_actions: 0,
+                approved: 0,
+                blocked: 0,
+                failed: 0,
+                total_latency_ms: 0,
+                total_cost_usd: 0.0,
+                consensus_agreements: 0,
+                consensus_failures: 0,
+                drift_detections: 0,
+                rollbacks: 0,
+                verifications_passed: 0,
+                verifications_failed: 0,
             }),
         }
     }
@@ -58,20 +65,34 @@ impl Metrics {
         m.total_actions += 1;
         m.total_latency_ms += latency_ms;
         m.total_cost_usd += cost_usd;
-        if approved { m.approved += 1; } else { m.blocked += 1; }
+        if approved {
+            m.approved += 1;
+        } else {
+            m.blocked += 1;
+        }
     }
 
     pub fn record_consensus(&self, reached: bool) {
         let mut m = self.inner.write().unwrap_or_else(|e| e.into_inner());
-        if reached { m.consensus_agreements += 1; } else { m.consensus_failures += 1; }
+        if reached {
+            m.consensus_agreements += 1;
+        } else {
+            m.consensus_failures += 1;
+        }
     }
 
     pub fn record_drift(&self) {
-        self.inner.write().unwrap_or_else(|e| e.into_inner()).drift_detections += 1;
+        self.inner
+            .write()
+            .unwrap_or_else(|e| e.into_inner())
+            .drift_detections += 1;
     }
 
     pub fn record_rollback(&self) {
-        self.inner.write().unwrap_or_else(|e| e.into_inner()).rollbacks += 1;
+        self.inner
+            .write()
+            .unwrap_or_else(|e| e.into_inner())
+            .rollbacks += 1;
     }
 
     pub fn record_failure(&self) {
@@ -80,7 +101,11 @@ impl Metrics {
 
     pub fn record_verification(&self, passed: bool) {
         let mut m = self.inner.write().unwrap_or_else(|e| e.into_inner());
-        if passed { m.verifications_passed += 1; } else { m.verifications_failed += 1; }
+        if passed {
+            m.verifications_passed += 1;
+        } else {
+            m.verifications_failed += 1;
+        }
     }
 
     pub fn snapshot(&self) -> MetricsSnapshot {
@@ -93,7 +118,9 @@ impl Metrics {
             total_latency_ms: m.total_latency_ms,
             avg_latency_ms: if m.total_actions > 0 {
                 m.total_latency_ms as f64 / m.total_actions as f64
-            } else { 0.0 },
+            } else {
+                0.0
+            },
             total_cost_usd: m.total_cost_usd,
             consensus_agreements: m.consensus_agreements,
             consensus_failures: m.consensus_failures,
@@ -112,7 +139,9 @@ pub struct Timer {
 
 impl Timer {
     pub fn start() -> Self {
-        Self { start: Instant::now() }
+        Self {
+            start: Instant::now(),
+        }
     }
 
     pub fn elapsed_ms(&self) -> u64 {

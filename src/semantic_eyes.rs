@@ -18,10 +18,10 @@
 //! let precedent = eyes.find_precedent("transaction velocity limit exceeded");
 //! ```
 
+use serde::{Deserialize, Serialize};
+use serde_json::{json, Value};
 use std::collections::HashMap;
 use std::path::Path;
-use serde::{Serialize, Deserialize};
-use serde_json::{json, Value};
 
 // Edge type constants (matching graph_engine)
 const SOLVES: u8 = 0;
@@ -81,15 +81,20 @@ impl SemanticEyes {
     pub fn load(graphs_dir: &Path) -> Result<Self, String> {
         let index_path = graphs_dir.join("index.jsonld");
         let term_index: HashMap<String, Vec<String>> = if index_path.exists() {
-            let content = std::fs::read_to_string(&index_path)
-                .map_err(|e| format!("read index: {}", e))?;
-            let index: Value = serde_json::from_str(&content)
-                .map_err(|e| format!("parse index: {}", e))?;
+            let content =
+                std::fs::read_to_string(&index_path).map_err(|e| format!("read index: {}", e))?;
+            let index: Value =
+                serde_json::from_str(&content).map_err(|e| format!("parse index: {}", e))?;
             if let Some(obj) = index["term_to_clusters"].as_object() {
                 obj.iter()
                     .filter_map(|(k, v)| {
                         v.as_array().map(|arr| {
-                            (k.clone(), arr.iter().filter_map(|x| x.as_str().map(|s| s.to_string())).collect())
+                            (
+                                k.clone(),
+                                arr.iter()
+                                    .filter_map(|x| x.as_str().map(|s| s.to_string()))
+                                    .collect(),
+                            )
                         })
                     })
                     .collect()
@@ -108,7 +113,8 @@ impl SemanticEyes {
 
     /// Find relevant clusters for a query using the term index.
     fn relevant_clusters(&self, query: &str, max: usize) -> Vec<String> {
-        let terms: Vec<String> = query.to_lowercase()
+        let terms: Vec<String> = query
+            .to_lowercase()
             .split(|c: char| !c.is_alphanumeric())
             .filter(|t| t.len() > 3)
             .map(|t| t.to_string())
@@ -131,32 +137,42 @@ impl SemanticEyes {
     /// Open a binary graph for a cluster (mmap — instant, no RAM).
     fn open_graph(&self, cluster: &str) -> Option<BinaryGraphReader> {
         let path = self.graphs_dir.join(format!("{}.graphbin", cluster));
-        if !path.exists() { return None; }
+        if !path.exists() {
+            return None;
+        }
         let file = std::fs::File::open(&path).ok()?;
         let mmap = unsafe { memmap2::Mmap::map(&file).ok()? };
-        if mmap.len() < 64 || &mmap[0..8] != b"SWRMGRPH" { return None; }
+        if mmap.len() < 64 || &mmap[0..8] != b"SWRMGRPH" {
+            return None;
+        }
 
         let node_count = u32::from_le_bytes([mmap[12], mmap[13], mmap[14], mmap[15]]);
         let node_data_offset = u64::from_le_bytes([
-            mmap[20], mmap[21], mmap[22], mmap[23], mmap[24], mmap[25], mmap[26], mmap[27]
+            mmap[20], mmap[21], mmap[22], mmap[23], mmap[24], mmap[25], mmap[26], mmap[27],
         ]);
         let edge_csr_offset = u64::from_le_bytes([
-            mmap[28], mmap[29], mmap[30], mmap[31], mmap[32], mmap[33], mmap[34], mmap[35]
+            mmap[28], mmap[29], mmap[30], mmap[31], mmap[32], mmap[33], mmap[34], mmap[35],
         ]);
         let string_pool_offset = u64::from_le_bytes([
-            mmap[36], mmap[37], mmap[38], mmap[39], mmap[40], mmap[41], mmap[42], mmap[43]
+            mmap[36], mmap[37], mmap[38], mmap[39], mmap[40], mmap[41], mmap[42], mmap[43],
         ]);
         let index_offset = u64::from_le_bytes([
-            mmap[44], mmap[45], mmap[46], mmap[47], mmap[48], mmap[49], mmap[50], mmap[51]
+            mmap[44], mmap[45], mmap[46], mmap[47], mmap[48], mmap[49], mmap[50], mmap[51],
         ]);
 
         // Load term index for this cluster
         let index_data = &mmap[index_offset as usize..];
-        let term_idx: HashMap<String, Vec<u32>> = serde_json::from_slice(index_data).unwrap_or_default();
+        let term_idx: HashMap<String, Vec<u32>> =
+            serde_json::from_slice(index_data).unwrap_or_default();
 
         Some(BinaryGraphReader {
-            mmap, cluster: cluster.to_string(),
-            node_count, node_data_offset, edge_csr_offset, string_pool_offset, term_idx,
+            mmap,
+            cluster: cluster.to_string(),
+            node_count,
+            node_data_offset,
+            edge_csr_offset,
+            string_pool_offset,
+            term_idx,
         })
     }
 
@@ -194,15 +210,22 @@ impl SemanticEyes {
             }
         }
 
-        let risk_level = if !contradictions.is_empty() && contradictions.len() > mitigations.len() {
-            "high"
-        } else if !factors.is_empty() {
-            "medium"
-        } else {
-            "low"
-        }.to_string();
+        let risk_level =
+            if !contradictions.is_empty() && contradictions.len() > mitigations.len() {
+                "high"
+            } else if !factors.is_empty() {
+                "medium"
+            } else {
+                "low"
+            }
+            .to_string();
 
-        RiskAssessment { risk_level, factors, mitigations, contradictions }
+        RiskAssessment {
+            risk_level,
+            factors,
+            mitigations,
+            contradictions,
+        }
     }
 
     /// Find evidence supporting or contradicting a claim.
@@ -218,7 +241,9 @@ impl SemanticEyes {
                         Some(n) => n,
                         None => continue,
                     };
-                    if node.2.len() < 50 { continue; } // description too short
+                    if node.2.len() < 50 {
+                        continue;
+                    } // description too short
 
                     evidence.push(KnowledgeFinding {
                         node_name: node.1.clone(),
@@ -275,19 +300,26 @@ impl SemanticEyes {
                 let from_hits = graph.search(from);
                 let to_hits = graph.search(to);
 
-                if let (Some((from_idx, _)), Some((to_idx, _))) = (from_hits.first(), to_hits.first()) {
+                if let (Some((from_idx, _)), Some((to_idx, _))) =
+                    (from_hits.first(), to_hits.first())
+                {
                     // BFS to find path
                     let path = graph.find_path(*from_idx, *to_idx, 5);
                     if !path.is_empty() {
-                        let steps: Vec<ReasoningStep> = path.windows(2).map(|pair| {
-                            let from_node = graph.read_node(pair[0]).map(|n| n.1).unwrap_or_default();
-                            let to_node = graph.read_node(pair[1]).map(|n| n.1).unwrap_or_default();
-                            ReasoningStep {
-                                node: from_node,
-                                edge_type: "connected".into(),
-                                next_node: to_node,
-                            }
-                        }).collect();
+                        let steps: Vec<ReasoningStep> = path
+                            .windows(2)
+                            .map(|pair| {
+                                let from_node =
+                                    graph.read_node(pair[0]).map(|n| n.1).unwrap_or_default();
+                                let to_node =
+                                    graph.read_node(pair[1]).map(|n| n.1).unwrap_or_default();
+                                ReasoningStep {
+                                    node: from_node,
+                                    edge_type: "connected".into(),
+                                    next_node: to_node,
+                                }
+                            })
+                            .collect();
                         return Some(ReasoningPath { steps });
                     }
                 }
@@ -337,9 +369,13 @@ struct BinaryGraphReader {
 impl BinaryGraphReader {
     /// Read node: returns (index, name, description)
     fn read_node(&self, index: u32) -> Option<(u32, String, String)> {
-        if index >= self.node_count { return None; }
+        if index >= self.node_count {
+            return None;
+        }
         let offset = self.node_data_offset as usize + (index as usize) * 32;
-        if offset + 32 > self.mmap.len() { return None; }
+        if offset + 32 > self.mmap.len() {
+            return None;
+        }
 
         let entry = &self.mmap[offset..offset + 32];
         let name_off = u32::from_le_bytes([entry[3], entry[4], entry[5], entry[6]]);
@@ -356,13 +392,16 @@ impl BinaryGraphReader {
     fn read_string(&self, offset: u32, len: u32) -> String {
         let start = self.string_pool_offset as usize + offset as usize;
         let end = start + len as usize;
-        if end > self.mmap.len() { return String::new(); }
+        if end > self.mmap.len() {
+            return String::new();
+        }
         String::from_utf8_lossy(&self.mmap[start..end]).to_string()
     }
 
     /// Search by term — O(1) via inverted index.
     fn search(&self, query: &str) -> Vec<(u32, usize)> {
-        let terms: Vec<String> = query.to_lowercase()
+        let terms: Vec<String> = query
+            .to_lowercase()
             .split(|c: char| !c.is_alphanumeric())
             .filter(|t| t.len() > 3)
             .map(|t| t.to_string())
@@ -385,9 +424,13 @@ impl BinaryGraphReader {
 
     /// Follow edges of a specific type from a node.
     fn follow(&self, node_index: u32, edge_type: u8) -> Vec<u32> {
-        if node_index >= self.node_count { return Vec::new(); }
+        if node_index >= self.node_count {
+            return Vec::new();
+        }
         let offset = self.node_data_offset as usize + (node_index as usize) * 32;
-        if offset + 32 > self.mmap.len() { return Vec::new(); }
+        if offset + 32 > self.mmap.len() {
+            return Vec::new();
+        }
 
         let entry = &self.mmap[offset..offset + 32];
         let edge_start = u32::from_le_bytes([entry[17], entry[18], entry[19], entry[20]]);
@@ -396,7 +439,9 @@ impl BinaryGraphReader {
         let mut targets = Vec::new();
         for i in 0..edge_count as u32 {
             let e_offset = self.edge_csr_offset as usize + ((edge_start + i) as usize) * 12;
-            if e_offset + 12 > self.mmap.len() { break; }
+            if e_offset + 12 > self.mmap.len() {
+                break;
+            }
             let e_data = &self.mmap[e_offset..e_offset + 12];
             let target = u32::from_le_bytes([e_data[0], e_data[1], e_data[2], e_data[3]]);
             let etype = e_data[4];
@@ -421,7 +466,9 @@ impl BinaryGraphReader {
                 let mut path = vec![to];
                 let mut node = to;
                 while let Some(&parent) = visited.get(&node) {
-                    if parent == u32::MAX { break; }
+                    if parent == u32::MAX {
+                        break;
+                    }
                     path.push(parent);
                     node = parent;
                 }
@@ -431,35 +478,52 @@ impl BinaryGraphReader {
 
             // Follow all edge types
             let offset = self.node_data_offset as usize + (current as usize) * 32;
-            if offset + 32 > self.mmap.len() { continue; }
+            if offset + 32 > self.mmap.len() {
+                continue;
+            }
             let entry = &self.mmap[offset..offset + 32];
             let edge_start = u32::from_le_bytes([entry[17], entry[18], entry[19], entry[20]]);
             let edge_count = u16::from_le_bytes([entry[21], entry[22]]);
 
             for i in 0..edge_count as u32 {
                 let e_offset = self.edge_csr_offset as usize + ((edge_start + i) as usize) * 12;
-                if e_offset + 12 > self.mmap.len() { break; }
+                if e_offset + 12 > self.mmap.len() {
+                    break;
+                }
                 let target = u32::from_le_bytes([
-                    self.mmap[e_offset], self.mmap[e_offset+1], self.mmap[e_offset+2], self.mmap[e_offset+3]
+                    self.mmap[e_offset],
+                    self.mmap[e_offset + 1],
+                    self.mmap[e_offset + 2],
+                    self.mmap[e_offset + 3],
                 ]);
                 if !visited.contains_key(&target) {
                     visited.insert(target, current);
                     queue.push_back(target);
-                    if visited.len() > 10000 { return Vec::new(); } // Safety cap
+                    if visited.len() > 10000 {
+                        return Vec::new();
+                    } // Safety cap
                 }
             }
 
-            if visited.len() > max_depth * 1000 { break; }
+            if visited.len() > max_depth * 1000 {
+                break;
+            }
         }
 
         Vec::new() // No path found
     }
 
     fn to_finding(&self, node_index: u32, cluster: &str, relationship: &str) -> KnowledgeFinding {
-        let (_, name, desc) = self.read_node(node_index).unwrap_or((0, String::new(), String::new()));
+        let (_, name, desc) =
+            self.read_node(node_index)
+                .unwrap_or((0, String::new(), String::new()));
         KnowledgeFinding {
             node_name: name,
-            description: if desc.len() > 300 { format!("{}...", &desc[..300]) } else { desc },
+            description: if desc.len() > 300 {
+                format!("{}...", &desc[..300])
+            } else {
+                desc
+            },
             domain: cluster.to_string(),
             relationship: relationship.to_string(),
             source_cluster: cluster.to_string(),

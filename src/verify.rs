@@ -27,7 +27,9 @@ pub trait Verification: Send + Sync {
 pub struct FileExists;
 
 impl Verification for FileExists {
-    fn name(&self) -> &str { "file_exists" }
+    fn name(&self) -> &str {
+        "file_exists"
+    }
 
     fn check(&self, _action: &str, result: &serde_json::Value) -> VerifyResult {
         if let Some(path) = result.get("path").and_then(|p| p.as_str()) {
@@ -48,7 +50,9 @@ impl Verification for FileExists {
 pub struct NotEmpty;
 
 impl Verification for NotEmpty {
-    fn name(&self) -> &str { "not_empty" }
+    fn name(&self) -> &str {
+        "not_empty"
+    }
 
     fn check(&self, _action: &str, result: &serde_json::Value) -> VerifyResult {
         match result {
@@ -75,7 +79,9 @@ pub struct ConfidenceThreshold {
 }
 
 impl Verification for ConfidenceThreshold {
-    fn name(&self) -> &str { "confidence_threshold" }
+    fn name(&self) -> &str {
+        "confidence_threshold"
+    }
 
     fn check(&self, _action: &str, result: &serde_json::Value) -> VerifyResult {
         if let Some(confidence) = result.get("confidence").and_then(|c| c.as_f64()) {
@@ -100,16 +106,22 @@ impl Verification for ConfidenceThreshold {
 pub struct HallucinationCheck;
 
 impl Verification for HallucinationCheck {
-    fn name(&self) -> &str { "hallucination_check" }
+    fn name(&self) -> &str {
+        "hallucination_check"
+    }
 
     fn check(&self, _action: &str, result: &serde_json::Value) -> VerifyResult {
         let text = result.to_string().to_lowercase();
 
         // Common hallucination patterns
         let markers = [
-            "i cannot", "i don't have access", "as an ai",
-            "i'm not able to", "hypothetically",
-            "i would assume", "i believe this might",
+            "i cannot",
+            "i don't have access",
+            "as an ai",
+            "i'm not able to",
+            "hypothetically",
+            "i would assume",
+            "i believe this might",
         ];
 
         for marker in &markers {
@@ -139,10 +151,14 @@ pub fn run_verifications(
 
 /// Quick check: did ALL verifications pass?
 pub fn all_valid(results: &[(String, VerifyResult)]) -> bool {
-    results.iter().all(|(_, r)| matches!(r, VerifyResult::Valid))
+    results
+        .iter()
+        .all(|(_, r)| matches!(r, VerifyResult::Valid))
 }
 
 /// Quick check: any drift detected?
 pub fn has_drift(results: &[(String, VerifyResult)]) -> bool {
-    results.iter().any(|(_, r)| matches!(r, VerifyResult::Drift { .. }))
+    results
+        .iter()
+        .any(|(_, r)| matches!(r, VerifyResult::Drift { .. }))
 }

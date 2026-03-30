@@ -1,9 +1,16 @@
+pub use crate::audit::{AuditEntry, AuditLog, Severity};
+pub use crate::checkpoint::{Checkpoint, CheckpointStore, FileStore, MemoryStore};
+pub use crate::consensus::{
+    Agent, AgentResponse, ConsensusConfig, ConsensusResult, ConsensusStrategy,
+};
 pub use crate::error::{BastionError, BastionResult};
-pub use crate::consensus::{Agent, AgentResponse, ConsensusConfig, ConsensusStrategy, ConsensusResult};
-pub use crate::checkpoint::{Checkpoint, CheckpointStore, MemoryStore, FileStore};
-pub use crate::verify::{Verification, VerifyResult, FileExists, NotEmpty, ConfidenceThreshold, HallucinationCheck};
-pub use crate::audit::{AuditLog, AuditEntry, Severity};
-pub use crate::observe::{Metrics, MetricsSnapshot};
+pub use crate::guardrails::{
+    DangerousPatterns, Guardrail, GuardrailResult, GuardrailVerdict, HumanInLoop,
+    MedicalDisclaimer, SpendingLimit,
+};
 pub use crate::heal::{HealAction, HealDecision};
-pub use crate::guardrails::{Guardrail, GuardrailResult, GuardrailVerdict, SpendingLimit, DangerousPatterns, MedicalDisclaimer, HumanInLoop};
+pub use crate::observe::{Metrics, MetricsSnapshot};
 pub use crate::runtime::{BastionRuntime, GateOutcome};
+pub use crate::verify::{
+    ConfidenceThreshold, FileExists, HallucinationCheck, NotEmpty, Verification, VerifyResult,
+};

@@ -46,28 +46,46 @@ pub struct MemoryStore {
 
 impl MemoryStore {
     pub fn new() -> Self {
-        Self { data: RwLock::new(HashMap::new()) }
+        Self {
+            data: RwLock::new(HashMap::new()),
+        }
     }
 }
 
 #[async_trait]
 impl CheckpointStore for MemoryStore {
     async fn save(&self, checkpoint: &Checkpoint) -> BastionResult<()> {
-        self.data.write().unwrap_or_else(|e| e.into_inner()).insert(checkpoint.id.clone(), checkpoint.clone());
+        self.data
+            .write()
+            .unwrap_or_else(|e| e.into_inner())
+            .insert(checkpoint.id.clone(), checkpoint.clone());
         Ok(())
     }
 
     async fn load(&self, id: &str) -> BastionResult<Checkpoint> {
-        self.data.read().unwrap_or_else(|e| e.into_inner()).get(id).cloned()
+        self.data
+            .read()
+            .unwrap_or_else(|e| e.into_inner())
+            .get(id)
+            .cloned()
             .ok_or_else(|| BastionError::NotFound(id.to_string()))
     }
 
     async fn list(&self) -> BastionResult<Vec<String>> {
-        Ok(self.data.read().unwrap_or_else(|e| e.into_inner()).keys().cloned().collect())
+        Ok(self
+            .data
+            .read()
+            .unwrap_or_else(|e| e.into_inner())
+            .keys()
+            .cloned()
+            .collect())
     }
 
     async fn delete(&self, id: &str) -> BastionResult<()> {
-        self.data.write().unwrap_or_else(|e| e.into_inner()).remove(id);
+        self.data
+            .write()
+            .unwrap_or_else(|e| e.into_inner())
+            .remove(id);
         Ok(())
     }
 }
@@ -95,7 +113,8 @@ impl CheckpointStore for FileStore {
 
     async fn load(&self, id: &str) -> BastionResult<Checkpoint> {
         let path = self.dir.join(format!("{}.json", id));
-        let data = tokio::fs::read_to_string(&path).await
+        let data = tokio::fs::read_to_string(&path)
+            .await
             .map_err(|_| BastionError::NotFound(id.to_string()))?;
         Ok(serde_json::from_str(&data)?)
     }

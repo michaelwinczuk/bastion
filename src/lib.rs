@@ -35,25 +35,25 @@
 //! if !valid { runtime.rollback(&cp).await?; }
 //! ```
 
-pub mod error;
-pub mod consensus;
-pub mod checkpoint;
-pub mod verify;
 pub mod audit;
-pub mod observe;
-pub mod heal;
+pub mod checkpoint;
+pub mod consensus;
+pub mod error;
 pub mod guardrails;
+pub mod heal;
+pub mod observe;
+pub mod prelude;
 pub mod runtime;
 pub mod semantic_eyes;
-pub mod prelude;
+pub mod verify;
 
+pub use audit::{AuditEntry, AuditLog, Severity};
+pub use checkpoint::{Checkpoint, CheckpointStore, FileStore, MemoryStore};
+pub use consensus::{Agent, AgentResponse, ConsensusConfig, ConsensusResult, ConsensusStrategy};
 pub use error::{BastionError, BastionResult};
-pub use consensus::{Agent, AgentResponse, ConsensusConfig, ConsensusStrategy, ConsensusResult};
-pub use checkpoint::{Checkpoint, CheckpointStore, MemoryStore, FileStore};
-pub use verify::{Verification, VerifyResult};
-pub use audit::{AuditLog, AuditEntry, Severity};
-pub use observe::{Metrics, MetricsSnapshot};
-pub use heal::{HealAction, HealDecision};
 pub use guardrails::{Guardrail, GuardrailResult, GuardrailVerdict};
+pub use heal::{HealAction, HealDecision};
+pub use observe::{Metrics, MetricsSnapshot};
 pub use runtime::BastionRuntime;
 pub use semantic_eyes::SemanticEyes;
+pub use verify::{Verification, VerifyResult};

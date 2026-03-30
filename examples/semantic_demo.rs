@@ -61,11 +61,18 @@ fn main() {
     println!("     Mitigations found: {}", risks.mitigations.len());
     println!("     Contradictions found: {}", risks.contradictions.len());
     for factor in risks.factors.iter().take(3) {
-        println!("     ├─ [{}] {} → {}", factor.relationship, factor.node_name,
-            &factor.description[..factor.description.len().min(80)]);
+        println!(
+            "     ├─ [{}] {} → {}",
+            factor.relationship,
+            factor.node_name,
+            &factor.description[..factor.description.len().min(80)]
+        );
     }
     for mitigation in risks.mitigations.iter().take(2) {
-        println!("     ├─ [{}] {}", mitigation.relationship, mitigation.node_name);
+        println!(
+            "     ├─ [{}] {}",
+            mitigation.relationship, mitigation.node_name
+        );
     }
     println!();
 
@@ -75,8 +82,10 @@ fn main() {
     let evidence = eyes.find_evidence("OFAC sanctions compliance");
     println!("     Evidence found: {}", evidence.len());
     for e in evidence.iter().take(3) {
-        println!("     ├─ [{}] {} ({})",
-            e.relationship, e.node_name, e.domain);
+        println!(
+            "     ├─ [{}] {} ({})",
+            e.relationship, e.node_name, e.domain
+        );
     }
     println!();
 
@@ -86,9 +95,12 @@ fn main() {
     let precedent = eyes.find_precedent("transaction velocity limit exceeded");
     println!("     Precedents found: {}", precedent.len());
     for p in precedent.iter().take(3) {
-        println!("     ├─ [{}] {} → {}",
-            p.relationship, p.node_name,
-            &p.description[..p.description.len().min(60)]);
+        println!(
+            "     ├─ [{}] {} → {}",
+            p.relationship,
+            p.node_name,
+            &p.description[..p.description.len().min(60)]
+        );
     }
     println!();
 
@@ -99,7 +111,10 @@ fn main() {
         Some(path) => {
             println!("     Path found ({} steps):", path.steps.len());
             for step in &path.steps {
-                println!("     {} ──[{}]──► {}", step.node, step.edge_type, step.next_node);
+                println!(
+                    "     {} ──[{}]──► {}",
+                    step.node, step.edge_type, step.next_node
+                );
             }
         }
         None => println!("     No direct path found (graph may be too sparse)"),
@@ -111,7 +126,10 @@ fn main() {
     println!("  Action: 'execute high-value trade AAPL 10000 shares'");
     let context = eyes.enrich_audit("execute high-value trade AAPL 10000 shares");
     println!("     Semantic context attached to audit entry:");
-    println!("     {}", serde_json::to_string_pretty(&context).unwrap_or_default());
+    println!(
+        "     {}",
+        serde_json::to_string_pretty(&context).unwrap_or_default()
+    );
     println!();
 
     // ── Summary ──
@@ -176,9 +194,21 @@ fn build_sample_graph(dir: &Path) {
     // Build a minimal index
     let mut term_to_clusters: HashMap<String, Vec<String>> = HashMap::new();
     let terms = vec![
-        "transaction", "transfer", "compliance", "sanctions", "ofac",
-        "velocity", "limit", "monitoring", "trade", "risk",
-        "fraud", "aml", "kyc", "wallet", "audit",
+        "transaction",
+        "transfer",
+        "compliance",
+        "sanctions",
+        "ofac",
+        "velocity",
+        "limit",
+        "monitoring",
+        "trade",
+        "risk",
+        "fraud",
+        "aml",
+        "kyc",
+        "wallet",
+        "audit",
     ];
     for term in &terms {
         term_to_clusters.insert(term.to_string(), vec!["sample".to_string()]);
@@ -196,7 +226,11 @@ fn build_sample_graph(dir: &Path) {
         },
         "cross_cluster_edges": {}
     });
-    std::fs::write(dir.join("index.jsonld"), serde_json::to_string_pretty(&index).unwrap()).unwrap();
+    std::fs::write(
+        dir.join("index.jsonld"),
+        serde_json::to_string_pretty(&index).unwrap(),
+    )
+    .unwrap();
 
     // Build a small binary graph with typed edges
     // Nodes: compliance concepts with real relationships
@@ -231,23 +265,23 @@ fn build_sample_graph(dir: &Path) {
         (12, 13, 1), // Sanctions Violation causes Transaction Rollback
         (14, 17, 1), // Rate Limit Exceeded causes Manual Review Queue
         // Solves
-        (0, 5, 0),   // Transaction Monitoring solves Fraud Detection
-        (1, 12, 0),  // OFAC Screening solves Sanctions Violation
-        (2, 14, 0),  // Velocity Limits solves Rate Limit Exceeded
-        (4, 11, 0),  // KYC Verification solves Unknown Counterparty Risk
-        (6, 10, 0),  // Risk Scoring solves High Value Transfer Risk
+        (0, 5, 0),  // Transaction Monitoring solves Fraud Detection
+        (1, 12, 0), // OFAC Screening solves Sanctions Violation
+        (2, 14, 0), // Velocity Limits solves Rate Limit Exceeded
+        (4, 11, 0), // KYC Verification solves Unknown Counterparty Risk
+        (6, 10, 0), // Risk Scoring solves High Value Transfer Risk
         // Enables
-        (3, 9, 3),   // AML Compliance enables Regulatory Reporting
-        (0, 6, 3),   // Transaction Monitoring enables Risk Scoring
-        (4, 18, 3),  // KYC enables Counterparty Risk Assessment
-        (16, 9, 3),  // Audit Trail enables Regulatory Reporting
+        (3, 9, 3),  // AML Compliance enables Regulatory Reporting
+        (0, 6, 3),  // Transaction Monitoring enables Risk Scoring
+        (4, 18, 3), // KYC enables Counterparty Risk Assessment
+        (16, 9, 3), // Audit Trail enables Regulatory Reporting
         // Contradicts
-        (10, 2, 4),  // High Value Transfer Risk contradicts Velocity Limits (tension)
-        (11, 7, 4),  // Unknown Counterparty Risk contradicts Wallet Security
+        (10, 2, 4), // High Value Transfer Risk contradicts Velocity Limits (tension)
+        (11, 7, 4), // Unknown Counterparty Risk contradicts Wallet Security
         // Requires
-        (1, 4, 2),   // OFAC Screening requires KYC
-        (3, 0, 2),   // AML Compliance requires Transaction Monitoring
-        (9, 16, 2),  // Regulatory Reporting requires Audit Trail
+        (1, 4, 2),  // OFAC Screening requires KYC
+        (3, 0, 2),  // AML Compliance requires Transaction Monitoring
+        (9, 16, 2), // Regulatory Reporting requires Audit Trail
         // Improves
         (5, 0, 6),   // Fraud Detection improves Transaction Monitoring
         (19, 17, 6), // Alert System improves Manual Review Queue
@@ -255,16 +289,25 @@ fn build_sample_graph(dir: &Path) {
         (15, 17, 9), // Enhanced Due Diligence alternative to Manual Review
         (8, 0, 9),   // Trade Surveillance alternative to Transaction Monitoring
         // TradeoffOf
-        (2, 10, 8),  // Velocity Limits tradeoff of High Value Transfer Risk
+        (2, 10, 8), // Velocity Limits tradeoff of High Value Transfer Risk
     ];
 
     // Write binary graph
     write_binary_graph(dir, "sample", &nodes, &edges);
-    println!("     {} nodes, {} edges ({} semantic)",
-        nodes.len(), edges.len(), edges.iter().filter(|(_, _, t)| *t != 5).count());
+    println!(
+        "     {} nodes, {} edges ({} semantic)",
+        nodes.len(),
+        edges.len(),
+        edges.iter().filter(|(_, _, t)| *t != 5).count()
+    );
 }
 
-fn write_binary_graph(dir: &Path, cluster: &str, nodes: &[(&str, &str)], edges: &[(usize, usize, u8)]) {
+fn write_binary_graph(
+    dir: &Path,
+    cluster: &str,
+    nodes: &[(&str, &str)],
+    edges: &[(usize, usize, u8)],
+) {
     let mut string_pool: Vec<u8> = Vec::new();
     let mut node_entries: Vec<[u8; 32]> = Vec::new();
     let mut edge_entries: Vec<u8> = Vec::new();
@@ -286,7 +329,8 @@ fn write_binary_graph(dir: &Path, cluster: &str, nodes: &[(&str, &str)], edges: 
         let desc_len = desc.len() as u32;
 
         // Count edges for this node
-        let node_edges: Vec<&(usize, usize, u8)> = edges.iter().filter(|(from, _, _)| *from == i).collect();
+        let node_edges: Vec<&(usize, usize, u8)> =
+            edges.iter().filter(|(from, _, _)| *from == i).collect();
         let edge_count = node_edges.len() as u16;
 
         let mut entry = [0u8; 32];
@@ -315,11 +359,17 @@ fn write_binary_graph(dir: &Path, cluster: &str, nodes: &[(&str, &str)], edges: 
         let text = format!("{} {}", name.to_lowercase(), desc.to_lowercase());
         for word in text.split(|c: char| !c.is_alphanumeric()) {
             if word.len() > 3 {
-                term_index.entry(word.to_string()).or_default().push(i as u32);
+                term_index
+                    .entry(word.to_string())
+                    .or_default()
+                    .push(i as u32);
                 // Bloom insert
                 for seed in 0..bloom_hashes {
                     let mut h: u64 = 14695981039346656037u64.wrapping_add(seed as u64 * 2654435761);
-                    for b in word.as_bytes() { h ^= *b as u64; h = h.wrapping_mul(1099511628211); }
+                    for b in word.as_bytes() {
+                        h ^= *b as u64;
+                        h = h.wrapping_mul(1099511628211);
+                    }
                     let idx = h as usize % (bloom_bits.len() * 64);
                     bloom_bits[idx / 64] |= 1 << (idx % 64);
                 }
@@ -349,7 +399,9 @@ fn write_binary_graph(dir: &Path, cluster: &str, nodes: &[(&str, &str)], edges: 
     file.write_all(&index_offset.to_le_bytes()).unwrap();
     file.write_all(&[0u8; 12]).unwrap(); // pad to 64
 
-    for entry in &node_entries { file.write_all(entry).unwrap(); }
+    for entry in &node_entries {
+        file.write_all(entry).unwrap();
+    }
     file.write_all(&edge_entries).unwrap();
     file.write_all(&string_pool).unwrap();
     file.write_all(&index_bytes).unwrap();
@@ -358,6 +410,8 @@ fn write_binary_graph(dir: &Path, cluster: &str, nodes: &[(&str, &str)], edges: 
     let mut bloom_bytes = Vec::new();
     bloom_bytes.extend_from_slice(&(bloom_bits.len() as u32).to_le_bytes());
     bloom_bytes.extend_from_slice(&(bloom_hashes as u32).to_le_bytes());
-    for word in &bloom_bits { bloom_bytes.extend_from_slice(&word.to_le_bytes()); }
+    for word in &bloom_bits {
+        bloom_bytes.extend_from_slice(&word.to_le_bytes());
+    }
     std::fs::write(dir.join(format!("{}.bloom", cluster)), bloom_bytes).unwrap();
 }

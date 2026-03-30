@@ -149,7 +149,8 @@ pub async fn run_consensus(
             .filter(|r| r.content.trim().to_lowercase() != chosen.content.trim().to_lowercase())
             .cloned()
             .collect();
-        let avg_conf = best_group.iter().map(|r| r.confidence).sum::<f64>() / best_group.len() as f64;
+        let avg_conf =
+            best_group.iter().map(|r| r.confidence).sum::<f64>() / best_group.len() as f64;
 
         return Ok(ConsensusResult {
             chosen,
@@ -177,7 +178,8 @@ pub async fn run_consensus(
         .filter(|r| r.content.trim().to_lowercase() != chosen.content.trim().to_lowercase())
         .cloned()
         .collect();
-    let avg_conf = winner_group.iter().map(|r| r.confidence).sum::<f64>() / winner_group.len() as f64;
+    let avg_conf =
+        winner_group.iter().map(|r| r.confidence).sum::<f64>() / winner_group.len() as f64;
 
     Ok(ConsensusResult {
         chosen,

@@ -3,7 +3,7 @@
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use sha2::{Sha256, Digest};
+use sha2::{Digest, Sha256};
 use std::sync::RwLock;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -31,12 +31,23 @@ pub struct AuditLog {
 
 impl AuditLog {
     pub fn new() -> Self {
-        Self { entries: RwLock::new(Vec::new()) }
+        Self {
+            entries: RwLock::new(Vec::new()),
+        }
     }
 
-    pub fn log(&self, severity: Severity, action: &str, detail: &str, data: Option<serde_json::Value>) -> String {
+    pub fn log(
+        &self,
+        severity: Severity,
+        action: &str,
+        detail: &str,
+        data: Option<serde_json::Value>,
+    ) -> String {
         let mut entries = self.entries.write().unwrap_or_else(|e| e.into_inner());
-        let prev_hash = entries.last().map(|e| e.hash.clone()).unwrap_or_else(|| "GENESIS".into());
+        let prev_hash = entries
+            .last()
+            .map(|e| e.hash.clone())
+            .unwrap_or_else(|| "GENESIS".into());
         let id = uuid::Uuid::new_v4().to_string();
         let timestamp = Utc::now();
 
@@ -58,7 +69,10 @@ impl AuditLog {
     }
 
     pub fn entries(&self) -> Vec<AuditEntry> {
-        self.entries.read().unwrap_or_else(|e| e.into_inner()).clone()
+        self.entries
+            .read()
+            .unwrap_or_else(|e| e.into_inner())
+            .clone()
     }
 
     pub fn len(&self) -> usize {

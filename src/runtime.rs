@@ -58,7 +58,11 @@ impl<S: CheckpointStore> BastionRuntime<S> {
     }
 
     /// Gate with context (for guardrails that need structured data).
-    pub async fn gate_with_context(&self, action: &str, context: &serde_json::Value) -> BastionResult<GateOutcome> {
+    pub async fn gate_with_context(
+        &self,
+        action: &str,
+        context: &serde_json::Value,
+    ) -> BastionResult<GateOutcome> {
         let timer = Timer::start();
 
         let guardrail_results = guardrails::evaluate_all(&self.guardrails, action, context);
@@ -67,20 +71,35 @@ impl<S: CheckpointStore> BastionRuntime<S> {
                 GuardrailVerdict::Block { reason } => reason.clone(),
                 _ => "blocked".into(),
             };
-            self.audit.log(Severity::Critical, action, &format!("BLOCKED: {}", reason), Some(context.clone()));
+            self.audit.log(
+                Severity::Critical,
+                action,
+                &format!("BLOCKED: {}", reason),
+                Some(context.clone()),
+            );
             self.metrics.record_action(false, timer.elapsed_ms(), 0.0);
             return Ok(GateOutcome::Blocked { reason });
         }
 
         match consensus::run_consensus(&self.agents, action, &self.consensus_config).await {
             Ok(result) => {
-                self.audit.log(Severity::Info, action, &format!("APPROVED: {:.0}%", result.agreement_ratio * 100.0), None);
+                self.audit.log(
+                    Severity::Info,
+                    action,
+                    &format!("APPROVED: {:.0}%", result.agreement_ratio * 100.0),
+                    None,
+                );
                 self.metrics.record_action(true, timer.elapsed_ms(), 0.0);
                 self.metrics.record_consensus(true);
                 Ok(GateOutcome::Approved { consensus: result })
             }
             Err(BastionError::ConsensusFailure { reason }) => {
-                self.audit.log(Severity::Warning, action, &format!("REJECTED: {}", reason), None);
+                self.audit.log(
+                    Severity::Warning,
+                    action,
+                    &format!("REJECTED: {}", reason),
+                    None,
+                );
                 self.metrics.record_action(false, timer.elapsed_ms(), 0.0);
                 self.metrics.record_consensus(false);
                 Ok(GateOutcome::Rejected { reason })
@@ -95,7 +114,12 @@ impl<S: CheckpointStore> BastionRuntime<S> {
         let cp = Checkpoint::new(label, state);
         let id = cp.id.clone();
         self.store.save(&cp).await?;
-        self.audit.log(Severity::Info, "checkpoint", &format!("saved: {}", label), None);
+        self.audit.log(
+            Severity::Info,
+            "checkpoint",
+            &format!("saved: {}", label),
+            None,
+        );
         Ok(id)
     }
 
@@ -109,11 +133,21 @@ impl<S: CheckpointStore> BastionRuntime<S> {
                     self.metrics.record_verification(true);
                 }
                 VerifyResult::Invalid { reason } => {
-                    self.audit.log(Severity::Critical, action, &format!("VERIFY FAILED ({}): {}", name, reason), None);
+                    self.audit.log(
+                        Severity::Critical,
+                        action,
+                        &format!("VERIFY FAILED ({}): {}", name, reason),
+                        None,
+                    );
                     self.metrics.record_verification(false);
                 }
                 VerifyResult::Drift { score, detail } => {
-                    self.audit.log(Severity::Warning, action, &format!("DRIFT ({}): {} (score={:.2})", name, detail, score), None);
+                    self.audit.log(
+                        Severity::Warning,
+                        action,
+                        &format!("DRIFT ({}): {} (score={:.2})", name, detail, score),
+                        None,
+                    );
                     self.metrics.record_drift();
                 }
             }
@@ -125,14 +159,25 @@ impl<S: CheckpointStore> BastionRuntime<S> {
 
     pub async fn rollback(&self, checkpoint_id: &str) -> BastionResult<Checkpoint> {
         let cp = self.store.load(checkpoint_id).await?;
-        self.audit.log(Severity::Critical, "rollback", &format!("restored to: {}", cp.label), None);
+        self.audit.log(
+            Severity::Critical,
+            "rollback",
+            &format!("restored to: {}", cp.label),
+            None,
+        );
         self.metrics.record_rollback();
         Ok(cp)
     }
 
     // ── heal() — self-healing decision ───────────────────
 
-    pub fn heal(&self, failure_type: &str, error: &str, attempt: u32, prev_failures: &[String]) -> heal::HealAction {
+    pub fn heal(
+        &self,
+        failure_type: &str,
+        error: &str,
+        attempt: u32,
+        prev_failures: &[String],
+    ) -> heal::HealAction {
         let ctx = heal::HealDecision {
             attempt,
             max_retries: self.max_retries,

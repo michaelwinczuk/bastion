@@ -31,11 +31,18 @@ pub struct SpendingLimit {
 }
 
 impl Guardrail for SpendingLimit {
-    fn name(&self) -> &str { "spending_limit" }
-    fn domain(&self) -> &str { "finance" }
+    fn name(&self) -> &str {
+        "spending_limit"
+    }
+    fn domain(&self) -> &str {
+        "finance"
+    }
 
     fn evaluate(&self, _action: &str, context: &serde_json::Value) -> GuardrailResult {
-        let amount = context.get("amount_usd").and_then(|a| a.as_f64()).unwrap_or(0.0);
+        let amount = context
+            .get("amount_usd")
+            .and_then(|a| a.as_f64())
+            .unwrap_or(0.0);
         if amount > self.max_usd {
             GuardrailResult {
                 rule: self.name().into(),
@@ -59,14 +66,24 @@ impl Guardrail for SpendingLimit {
 pub struct DangerousPatterns;
 
 impl Guardrail for DangerousPatterns {
-    fn name(&self) -> &str { "dangerous_patterns" }
-    fn domain(&self) -> &str { "coding" }
+    fn name(&self) -> &str {
+        "dangerous_patterns"
+    }
+    fn domain(&self) -> &str {
+        "coding"
+    }
 
     fn evaluate(&self, action: &str, _context: &serde_json::Value) -> GuardrailResult {
         let lower = action.to_lowercase();
         let dangerous = [
-            "rm -rf /", "drop table", "delete from", "format c:",
-            "shutdown", "exec(", "eval(", "system(",
+            "rm -rf /",
+            "drop table",
+            "delete from",
+            "format c:",
+            "shutdown",
+            "exec(",
+            "eval(",
+            "system(",
         ];
 
         for pattern in &dangerous {
@@ -94,12 +111,22 @@ impl Guardrail for DangerousPatterns {
 pub struct MedicalDisclaimer;
 
 impl Guardrail for MedicalDisclaimer {
-    fn name(&self) -> &str { "medical_disclaimer" }
-    fn domain(&self) -> &str { "medical" }
+    fn name(&self) -> &str {
+        "medical_disclaimer"
+    }
+    fn domain(&self) -> &str {
+        "medical"
+    }
 
     fn evaluate(&self, action: &str, _context: &serde_json::Value) -> GuardrailResult {
         let lower = action.to_lowercase();
-        let medical_terms = ["prescribe", "diagnose", "dosage", "treatment plan", "medication"];
+        let medical_terms = [
+            "prescribe",
+            "diagnose",
+            "dosage",
+            "treatment plan",
+            "medication",
+        ];
 
         for term in &medical_terms {
             if lower.contains(term) {
@@ -126,11 +153,18 @@ impl Guardrail for MedicalDisclaimer {
 pub struct HumanInLoop;
 
 impl Guardrail for HumanInLoop {
-    fn name(&self) -> &str { "human_in_loop" }
-    fn domain(&self) -> &str { "defense" }
+    fn name(&self) -> &str {
+        "human_in_loop"
+    }
+    fn domain(&self) -> &str {
+        "defense"
+    }
 
     fn evaluate(&self, _action: &str, context: &serde_json::Value) -> GuardrailResult {
-        let has_human_approval = context.get("human_approved").and_then(|v| v.as_bool()).unwrap_or(false);
+        let has_human_approval = context
+            .get("human_approved")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false);
         if !has_human_approval {
             GuardrailResult {
                 rule: self.name().into(),
@@ -155,10 +189,15 @@ pub fn evaluate_all(
     action: &str,
     context: &serde_json::Value,
 ) -> Vec<GuardrailResult> {
-    guardrails.iter().map(|g| g.evaluate(action, context)).collect()
+    guardrails
+        .iter()
+        .map(|g| g.evaluate(action, context))
+        .collect()
 }
 
 /// Quick check: any guardrail blocked?
 pub fn any_blocked(results: &[GuardrailResult]) -> Option<&GuardrailResult> {
-    results.iter().find(|r| matches!(r.verdict, GuardrailVerdict::Block { .. }))
+    results
+        .iter()
+        .find(|r| matches!(r.verdict, GuardrailVerdict::Block { .. }))
 }
