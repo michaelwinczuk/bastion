@@ -8,7 +8,7 @@ description = "Bastion — The open-source Production Kernel for Agentic AI. Mul
 repository = "https://github.com/michaelwinczuk/bastion"
 authors = ["Michael Winczuk <michaelwinczuk@gmail.com>"]
 readme = "README.md"
-keywords = ["ai", "agents", "reliability", "production", "consensus", "safety"]
+keywords = ["ai", "agents", "reliability", "consensus", "safety"]
 categories = ["asynchronous", "science"]
 
 [lib]
